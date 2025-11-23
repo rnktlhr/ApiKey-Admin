@@ -44,7 +44,39 @@
             text-shadow: 0 3px 10px rgba(0,0,0,0.3);
         }
 
-        
+        /* ===== INPUT GROUP ===== */
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 18px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(5px);
+            font-size: 0.95em;
+            color: #fff;
+            transition: 0.3s;
+        }
+
+        input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        input:focus {
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.02);
+        }
+
+       
     </style>
 </head>
 
