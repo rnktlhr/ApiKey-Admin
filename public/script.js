@@ -17,15 +17,14 @@ document.getElementById("loadUsers").addEventListener("click", async () => {
     out.textContent = 'Loading...';
     const token = getToken();
     try {
-        // Endpoint untuk mengambil semua user dan API Keys (asumsi endpoint: /api/admin/users)
-        const res = await fetch("/api/admin/apikeys", { // Menggunakan endpoint apikeys yang sudah kita buat
+        const res = await fetch("/api/admin/apikeys", { 
             headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         
         if (res.ok) {
             out.textContent = JSON.stringify(data, null, 2);
-            renderApiKeysTable(data); // Memanggil fungsi render untuk data API Key
+            renderApiKeysTable(data);
         } else {
             out.textContent = `Error: ${data.message || 'Gagal memuat data.'}`;
         }
@@ -36,7 +35,6 @@ document.getElementById("loadUsers").addEventListener("click", async () => {
 });
 
 // 2. Membersihkan API Key yang Kedaluwarsa
-// Catatan: Fungsi ini perlu diimplementasikan di backend (apikeyController.js/adminController.js)
 document.getElementById("cleanExpired").addEventListener("click", async () => {
     out.textContent = 'Cleaning expired keys...';
     const token = getToken();
@@ -49,7 +47,6 @@ document.getElementById("cleanExpired").addEventListener("click", async () => {
         
         if (res.ok) {
             out.textContent = JSON.stringify(data, null, 2);
-            // Muat ulang data setelah pembersihan
             document.getElementById("loadUsers").click(); 
         } else {
             out.textContent = `Error: ${data.message || 'Gagal membersihkan keys.'}`;
@@ -62,17 +59,12 @@ document.getElementById("cleanExpired").addEventListener("click", async () => {
 
 // 3. Logout
 document.getElementById("logout").addEventListener("click", () => {
-    localStorage.removeItem("adminToken"); // Gunakan nama token yang sama
+    localStorage.removeItem("adminToken");
     location.href = "/public/login.html";
 });
 
 // --- FUNGSI RENDERING ---
 
-/**
- * Merender daftar API Keys di Admin Dashboard.
- * Kita menggunakan data dari /api/admin/apikeys yang berisi list dokumen ApiKey.
- * @param {Array<Object>} apiKeys - Daftar dokumen API Key dari backend.
- */
 function renderApiKeysTable(apiKeys) {
     const wrap = document.getElementById('tableWrap');
     if (!apiKeys || apiKeys.length === 0) {
@@ -80,12 +72,23 @@ function renderApiKeysTable(apiKeys) {
         return;
     }
     
-    // Header Tabel yang Diperlukan Admin
-    let html = '<table class="table table-bordered table-striped"><thead><tr><th>ID Dokumen</th><th>Nama User</th><th>Email</th><th>API Key</th><th>Dibuat</th><th>Kedaluwarsa</th><th>Aksi</th></tr></thead><tbody>';
-    
+    let html = `
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID Dokumen</th>
+                <th>Nama User</th>
+                <th>Email</th>
+                <th>API Key</th>
+                <th>Dibuat</th>
+                <th>Kedaluwarsa</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+    <tbody>`;
+
     apiKeys.forEach(k => {
-        // 💡 Penyesuaian: Menggunakan field 'firstName', 'lastName', 'email', dan 'expiresAt'
-        const keySnippet = k.key.substring(0, 10) + '...'; // Potongan key
+        const keySnippet = k.key.substring(0, 10) + '...';
         const expiresDate = new Date(k.expiresAt).toLocaleDateString();
         const createdDate = new Date(k.createdAt).toLocaleDateString();
 
@@ -106,23 +109,31 @@ function renderApiKeysTable(apiKeys) {
     html += '</tbody></table>';
     wrap.innerHTML = html;
     
-    // Setelah tabel dirender, tambahkan event listener ke tombol Hapus
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', handleDeleteKey);
     });
+
+    /* ======================================================
+       🔥 TAMBAHAN BARU — listener untuk versi DELETE yang benar
+       ====================================================== */
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', handleDeleteKeyV2);
+    });
+    /* ======================================================
+       🔥 TAMBAHAN BARU (AKHIR)
+       ====================================================== */
 }
 
-// --- FUNGSI HAPUS SATU KEY ---
+// --- FUNGSI HAPUS SATU KEY (VERSI LAMA DIBIARKAN) ---
 
 async function handleDeleteKey(event) {
-    const keyId = event.target.dataset.keyId; // Mengambil ID dari atribut data-key-id
+    const keyId = event.target.dataset.keyId;
     if (!confirm(`Yakin ingin menghapus API Key ID: ${keyId}?`)) return;
 
     out.textContent = `Menghapus key ${keyId}...`;
     const token = getToken();
 
     try {
-        // Menggunakan endpoint DELETE yang sudah kita buat: /api/admin/apikeys/:id
         const res = await fetch(`/api/admin/apikeys/${keyId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
@@ -131,7 +142,6 @@ async function handleDeleteKey(event) {
 
         if (res.ok) {
             out.textContent = `Sukses: ${data.message}`;
-            // Muat ulang data setelah penghapusan berhasil
             document.getElementById("loadUsers").click(); 
         } else {
             out.textContent = `Gagal menghapus: ${data.message || 'Server error.'}`;
@@ -142,5 +152,37 @@ async function handleDeleteKey(event) {
     }
 }
 
-// Panggil loadUsers saat halaman dimuat (opsional, tergantung preferensi UX)
-// document.getElementById("loadUsers").click();
+/* ======================================================
+   🔥 TAMBAHAN BARU — FUNGSI DELETE MENGGUNAKAN ROUTE YANG BENAR
+   ====================================================== */
+
+async function handleDeleteKeyV2(event) {
+    const keyId = event.target.dataset.keyId;
+    if (!confirm(`Yakin ingin menghapus API Key ID: ${keyId}?`)) return;
+
+    out.textContent = `Menghapus key ${keyId}...`;
+    const token = getToken();
+
+    try {
+        const res = await fetch(`/api/admin/keys/${keyId}`, {   // <–– endpoint DELETE sesuai adminRoutes
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            out.textContent = `Sukses: ${data.message}`;
+            document.getElementById("loadUsers").click();
+        } else {
+            out.textContent = `Gagal menghapus: ${data.message}`;
+        }
+    } catch (error) {
+        console.error(error);
+        out.textContent = `Koneksi Error: ${error.message}`;
+    }
+}
+
+/* ======================================================
+   🔥 TAMBAHAN BARU (AKHIR)
+   ====================================================== */

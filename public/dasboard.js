@@ -1,4 +1,4 @@
-// File: public/dashboard.js (Final dengan Error Handling Kuat)
+// File: public/dashboard.js (FINAL)
 
 document.addEventListener('DOMContentLoaded', () => {
     const keysTableBody = document.getElementById('keysTableBody');
@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'login.html';
         return;
     }
-    
-    // --- Pastikan Logout Bekerja ---
+
+    // Tombol logout
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('adminToken');
@@ -26,13 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderKeys = (keys) => {
         keysTableBody.innerHTML = '';
+
         if (keys.length === 0) {
-            keysTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada API Key yang terdaftar.</td></tr>';
+            keysTableBody.innerHTML = `
+                <tr><td colspan="8" style="text-align: center;">Tidak ada API Key yang terdaftar.</td></tr>
+            `;
             return;
         }
+
         keys.forEach(key => {
             const row = keysTableBody.insertRow();
             let statusClass = '';
+
             if (key.status === 'Active') statusClass = 'status-active';
             else if (key.status === 'Expired') statusClass = 'status-expired';
             else if (key.status === 'Inactive') statusClass = 'status-inactive';
@@ -41,32 +46,40 @@ document.addEventListener('DOMContentLoaded', () => {
             row.insertCell().textContent = `${key.firstName} ${key.lastName}`;
             row.insertCell().textContent = key.email;
             row.insertCell().innerHTML = `<span class="${statusClass}">${key.status}</span>`;
-            
-            const maskedKey = key.key.substring(0, 8) + '...';
-            row.insertCell().textContent = maskedKey; 
-            
+
+            const maskedKey = key.key.substring(0, 8) + "...";
+            row.insertCell().textContent = maskedKey;
+
             row.insertCell().textContent = formatDate(key.createdAt);
             row.insertCell().textContent = formatDate(key.expiresAt);
 
             const actionCell = row.insertCell();
+
+            // Tombol NONAKTIFKAN
             if (key.status !== 'Inactive') {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = 'Nonaktifkan';
                 deleteBtn.onclick = () => handleDelete(key.id);
                 actionCell.appendChild(deleteBtn);
             }
+
+            // Tombol DELETE PERMANEN
+            const hardDeleteBtn = document.createElement('button');
+            hardDeleteBtn.textContent = 'Delete';
+            hardDeleteBtn.classList.add('delete-btn');
+            hardDeleteBtn.onclick = () => handleHardDelete(key.id);
+            actionCell.appendChild(hardDeleteBtn);
         });
     };
 
-    // --- FUNGSI UTAMA FETCH DATA ---
+    // Ambil semua API Key
     const fetchKeys = async () => {
         messageElement.textContent = 'Memuat data...';
+
         try {
             const response = await fetch('/api/admin/keys', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}` // TOKEN Wajib
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             const data = await response.json();
@@ -74,43 +87,59 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 renderKeys(data);
                 messageElement.textContent = `Ditemukan ${data.length} API Keys.`;
-            } else if (response.status === 401 || response.status === 403) {
-                console.error("Authentication Failed:", data.message);
-                messageElement.textContent = 'Gagal otorisasi. Token tidak valid.';
-                localStorage.removeItem('adminToken');
-                window.location.href = 'login.html';
             } else {
-                console.error('API Error:', data.message || response.statusText);
-                messageElement.textContent = `Gagal memuat data: ${data.message || 'Error server.'}`;
+                messageElement.textContent = `Error: ${data.message}`;
             }
         } catch (err) {
-            console.error('Network Error:', err);
-            messageElement.textContent = 'Kesalahan koneksi jaringan.';
+            messageElement.textContent = 'Kesalahan koneksi ke server.';
         }
     };
 
+    // === HAPUS / NONAKTIFKAN ===
     const handleDelete = async (keyId) => {
-        // ... (Logika delete sama, cukup panggil fetchKeys() di akhir)
         if (!confirm(`Yakin nonaktifkan Key ID: ${keyId}?`)) return;
 
         try {
-            const response = await fetch(`/api/apikey/${keyId}`, {
+            const response = await fetch(`/api/admin/keys/${keyId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
+            const data = await response.json();
+
             if (response.ok) {
                 alert('API Key berhasil dinonaktifkan.');
-                fetchKeys(); // Refresh data
+                fetchKeys();
             } else {
-                const data = await response.json();
-                alert(`Gagal menghapus: ${data.message}`);
+                alert(`Gagal: ${data.message}`);
             }
         } catch (err) {
             alert('Kesalahan koneksi saat menghapus.');
         }
     };
 
-    // Muat data saat halaman dimuat
+    // === HAPUS PERMANEN ===
+    const handleHardDelete = async (keyId) => {
+        if (!confirm(`Yakin HAPUS PERMANEN Key ID: ${keyId}?`)) return;
+
+        try {
+            const response = await fetch(`/api/admin/keys/${keyId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('API Key berhasil dihapus permanen.');
+                fetchKeys();
+            } else {
+                alert(`Gagal: ${data.message}`);
+            }
+        } catch (err) {
+            alert('Kesalahan koneksi saat menghapus permanen.');
+        }
+    };
+
     fetchKeys();
 });

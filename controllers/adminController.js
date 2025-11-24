@@ -56,5 +56,24 @@ module.exports = {
             console.error('Error fetching keys:', err);
             res.status(500).json({ message: 'Gagal mengambil data API Keys.' });
         }
+    },
+
+    async deleteApiKey(req, res) {
+        try {
+            const id = req.params.id;
+
+            const key = await ApiKey.findByPk(id);
+            if (!key) {
+                return res.status(404).json({ message: 'API Key tidak ditemukan.' });
+            }
+
+            await key.destroy();
+            return res.json({ message: 'API Key berhasil dihapus.' });
+
+        } catch (err) {
+            console.error('Delete API Key Error:', err);
+            return res.status(500).json({ message: 'Gagal menghapus API Key.' });
+        }
     }
+
 };

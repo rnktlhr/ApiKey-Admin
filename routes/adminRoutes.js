@@ -13,4 +13,6 @@ router.post('/login', adminController.login);
 // 2. Rute GET untuk Dashboard (Baris yang bermasalah)
 router.get('/keys', authMiddleware, adminController.getApiKeys); 
 
+router.delete('/keys/:id', authMiddleware, adminController.deleteApiKey);
+
 module.exports = router;
